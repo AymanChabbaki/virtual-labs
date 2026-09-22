@@ -1,0 +1,53 @@
+# Render Blueprint — déploie uniquement le backend (API + WebSocket).
+# Le frontend (Next.js) se déploie séparément sur Vercel.
+# La base de données Postgres est externe (AlwaysData) : DATABASE_URL est à saisir
+# manuellement dans le dashboard Render (ou remplacez par une DB Render si besoin).
+#
+# Usage : sur render.com → New → Blueprint → sélectionnez ce repo.
+services:
+  - type: web
+    name: virtual-labs-backend
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npx prisma migrate deploy && npm start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 4000
+      - key: DATABASE_URL
+        sync: false # collé depuis AlwaysData (postgresql://user:pass@host:5432/db)
+      - key: CORS_ORIGIN
+        sync: false # URL(s) du frontend Vercel, ex: https://virtual-labs.vercel.app
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_EXPIRES_IN
+        value: 12h
+      - key: STORAGE_DIR
+        value: ./storage
+      - key: MQTT_URL
+        sync: false # laissez vide/non défini si aucun appareil MQTT réel n'est branché
+      - key: MQTT_USERNAME
+        sync: false
+      - key: MQTT_PASSWORD
+        sync: false
+      - key: NO_SHOW_GRACE_SEC
+        value: 120
+      - key: REMINDER_MINUTES
+        value: 10
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: 587
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: MAIL_FROM
+        value: "Virtual Labs <no-reply@labs.local>"
+      - key: APP_TIMEZONE
+        value: Africa/Casablanca

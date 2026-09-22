@@ -1,0 +1,355 @@
+// ============================================================================
+//  Virtual & Remote Labs — مخطط قاعدة البيانات (PostgreSQL + Prisma 7)
+//  المسار الإجباري: TP افتراضي (Stage 1) → كويز (Stage 2) → TP عن بُعد (Stage 3)
+//  حالة القفل تُخزَّن في جدول Progress ويُتحقَّق منها في الـ backend فقط.
+// ============================================================================
+
+generator client {
+  provider     = "prisma-client"
+  output       = "../src/generated/prisma"
+  moduleFormat = "cjs"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ----------------------------------------------------------------------------
+//  Enums
+// ----------------------------------------------------------------------------
+enum Role {
+  STUDENT
+  TEACHER
+  ADMIN
+}
+
+enum Locale {
+  ar
+  fr
+}
+
+enum QuestionType {
+  MCQ         // اختيار متعدد (إجابة واحدة أو عدة إجابات)
+  TRUE_FALSE  // صح / خطأ
+  NUMERIC     // إجابة رقمية بهامش خطأ
+  FILL_BLANK  // ملء فراغ
+}
+
+enum AttemptStatus {
+  IN_PROGRESS
+  SUBMITTED
+  EXPIRED
+}
+
+enum BookingStatus {
+  BOOKED     // حصة محجوزة في المستقبل (أو في الطابور)
+  ACTIVE     // الجهاز مخصَّص للطالب الآن
+  COMPLETED
+  CANCELLED
+  NO_SHOW    // لم يحضر الطالب خلال مهلة السماح
+}
+
+enum DriverType {
+  MOCK  // جهاز وهمي (محاكاة فيزيائية داخل الخادم)
+  MQTT  // جهاز حقيقي عبر Raspberry Pi / Arduino + MQTT
+}
+
+enum ReportKind {
+  VIRTUAL
+  REMOTE
+}
+
+// ----------------------------------------------------------------------------
+//  المستخدمون والفصول
+// ----------------------------------------------------------------------------
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  name         String
+  role         Role     @default(STUDENT)
+  locale       Locale   @default(fr)
+  active       Boolean  @default(true)
+  classroomId  String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  classroom     Classroom?     @relation(fields: [classroomId], references: [id], onDelete: SetNull)
+  ownedLabs     Lab[]
+  progress      Progress[]
+  attempts      QuizAttempt[]
+  bookings      Booking[]
+  reports       Report[]
+  notifications Notification[]
+  audits        AuditLog[]
+
+  @@index([role])
+}
+
+model Classroom {
+  id       String @id @default(cuid())
+  name     String @unique
+  students User[]
+  labs     LabClassroom[]
+}
+
+// ----------------------------------------------------------------------------
+//  التجارب (TP) — كل TP معرَّف بوثيقة JSON (definition) قابلة للتوسع
+// ----------------------------------------------------------------------------
+model Lab {
+  id            String   @id @default(cuid())
+  slug          String   @unique
+  titleAr       String
+  titleFr       String
+  descriptionAr String   @default("")
+  descriptionFr String   @default("")
+  /// وثيقة تعريف المحاكاة: الخطوات، المعادلات، القيم المسموحة، معايير الإتمام، إعدادات التحكم عن بُعد
+  definition    Json
+  /// النسبة الدنيا للنجاح في الكويز لفتح المرحلة 3 (يضبطها الأستاذ)
+  passThreshold    Int     @default(70)
+  maxAttempts      Int     @default(3)
+  cooldownMinutes  Int     @default(10)
+  quizTimeLimitSec Int     @default(600)
+  /// عدد الأسئلة المسحوبة عشوائياً من البنك (null = الكل)
+  quizQuestionCount Int?
+  published     Boolean  @default(false)
+  ownerId       String
+  deviceId      String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  owner      User           @relation(fields: [ownerId], references: [id])
+  device     Device?        @relation(fields: [deviceId], references: [id], onDelete: SetNull)
+  classrooms LabClassroom[]
+  questions  Question[]
+  progress   Progress[]
+  attempts   QuizAttempt[]
+  bookings   Booking[]
+  reports    Report[]
+  samples    RemoteSample[]
+}
+
+/// ربط TP بفصول (إن لم يوجد أي ربط يكون الـ TP مرئياً لكل الطلبة)
+model LabClassroom {
+  labId       String
+  classroomId String
+  lab         Lab       @relation(fields: [labId], references: [id], onDelete: Cascade)
+  classroom   Classroom @relation(fields: [classroomId], references: [id], onDelete: Cascade)
+
+  @@id([labId, classroomId])
+}
+
+// ----------------------------------------------------------------------------
+//  بنك أسئلة الكويز
+// ----------------------------------------------------------------------------
+model Question {
+  id            String       @id @default(cuid())
+  labId         String
+  type          QuestionType
+  textAr        String
+  textFr        String
+  /// MCQ: {choices:[{id,ar,fr}], correct:[ids], multi?}
+  /// TRUE_FALSE: {correct:boolean}
+  /// NUMERIC: {answer, tolerancePct?, toleranceAbs?, unit?}
+  /// FILL_BLANK: {accepted:[[variants]...]}  (كل فراغ يُكتب ___ في النص)
+  payload       Json
+  points        Int          @default(1)
+  explanationAr String?
+  explanationFr String?
+  order         Int          @default(0)
+
+  lab Lab @relation(fields: [labId], references: [id], onDelete: Cascade)
+
+  @@index([labId, order])
+}
+
+// ----------------------------------------------------------------------------
+//  التقدّم في المسار الإجباري (مصدر الحقيقة للقفل)
+// ----------------------------------------------------------------------------
+model Progress {
+  id     String @id @default(cuid())
+  userId String
+  labId  String
+
+  // ---- المرحلة 1 ----
+  stage1Percent     Int       @default(0)
+  /// { [stepId]: { done:true, at:ISO, answer? } } — تتحقق منها الخوارزمية في الخادم
+  stage1Steps       Json      @default("{}")
+  /// نقاط القياس المعتمدة من الخادم [{params, values, at}]
+  stage1Points      Json      @default("[]")
+  /// حالة الواجهة (autosave): معاملات حالية، ملاحظات...
+  stage1Draft       Json?
+  stage1CompletedAt DateTime?
+
+  // ---- المرحلة 2 ----
+  quizAttemptsUsed    Int       @default(0)
+  /// محاولات إضافية يمنحها الأستاذ
+  extraAttempts       Int       @default(0)
+  quizBestPercent     Int?
+  quizLastSubmittedAt DateTime?
+  quizPassedAt        DateTime?
+
+  // ---- المرحلة 3 ----
+  remoteUnlockedAt  DateTime?
+  remoteCompletedAt DateTime?
+
+  updatedAt DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lab  Lab  @relation(fields: [labId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, labId])
+  @@index([labId])
+}
+
+model QuizAttempt {
+  id          String        @id @default(cuid())
+  userId      String
+  labId       String
+  number      Int
+  status      AttemptStatus @default(IN_PROGRESS)
+  startedAt   DateTime      @default(now())
+  deadlineAt  DateTime
+  submittedAt DateTime?
+  /// الترتيب المخلوط الذي قُدِّم للطالب: [{q:questionId, c:[choiceId...]}]
+  served      Json
+  answers     Json          @default("{}")
+  score       Float?
+  maxScore    Float?
+  percent     Int?
+  passed      Boolean?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lab  Lab  @relation(fields: [labId], references: [id], onDelete: Cascade)
+
+  @@index([userId, labId])
+}
+
+// ----------------------------------------------------------------------------
+//  الأجهزة والحجز والتحكم عن بُعد
+// ----------------------------------------------------------------------------
+model Device {
+  id          String     @id @default(cuid())
+  name        String
+  driver      DriverType @default(MOCK)
+  /// بادئة المواضيع في MQTT: labs/<topic>/cmd | telemetry | status
+  topic       String     @unique
+  /// رابط MJPEG للجهاز الحقيقي (فارغ في الوضع الوهمي: تُرسم الكاميرا في المتصفح)
+  videoUrl    String?
+  /// حدود الأمان: {voltage:{min,max}, maxCurrentMa, loads:[...], maxCommandsPerSec}
+  limits      Json
+  slotMinutes Int        @default(15)
+  maintenance Boolean    @default(false)
+  lastSeenAt  DateTime?
+
+  labs     Lab[]
+  bookings Booking[]
+  commands CommandLog[]
+}
+
+model Booking {
+  id          String        @id @default(cuid())
+  userId      String
+  labId       String
+  deviceId    String
+  startsAt    DateTime
+  endsAt      DateTime
+  status      BookingStatus @default(BOOKED)
+  activatedAt DateTime?
+  joinedAt    DateTime?
+  endedAt     DateTime?
+  endReason   String?
+  reminderSent Boolean      @default(false)
+  createdAt   DateTime      @default(now())
+
+  user     User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lab      Lab            @relation(fields: [labId], references: [id], onDelete: Cascade)
+  device   Device         @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  samples  RemoteSample[]
+  commands CommandLog[]
+
+  @@index([deviceId, startsAt])
+  @@index([userId, status])
+}
+
+/// قياسات "سجّل نقطة" في جلسة التحكم عن بُعد (تؤخذ من آخر قياس حقيقي في الخادم)
+model RemoteSample {
+  id        String   @id @default(cuid())
+  bookingId String
+  userId    String
+  labId     String
+  values    Json
+  createdAt DateTime @default(now())
+
+  booking Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  lab     Lab     @relation(fields: [labId], references: [id], onDelete: Cascade)
+
+  @@index([userId, labId])
+}
+
+/// سجل تدقيق (audit log) لكل أمر مرسَل إلى الجهاز — مقبول أو مرفوض
+model CommandLog {
+  id        String   @id @default(cuid())
+  bookingId String?
+  userId    String?
+  deviceId  String
+  name      String
+  params    Json     @default("{}")
+  accepted  Boolean
+  reason    String?
+  createdAt DateTime @default(now())
+
+  booking Booking? @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  device  Device   @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+
+  @@index([deviceId, createdAt])
+  @@index([bookingId])
+}
+
+// ----------------------------------------------------------------------------
+//  التقارير والإشعارات والسجلات
+// ----------------------------------------------------------------------------
+model Report {
+  id        String     @id @default(cuid())
+  userId    String
+  labId     String
+  kind      ReportKind
+  filePath  String
+  data      Json?
+  createdAt DateTime   @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  lab  Lab  @relation(fields: [labId], references: [id], onDelete: Cascade)
+
+  @@index([userId, labId])
+}
+
+model Notification {
+  id        String    @id @default(cuid())
+  userId    String
+  /// stage2_unlocked | stage3_unlocked | quiz_failed | booking_created | booking_reminder | session_started ...
+  kind      String
+  /// معاملات تُترجم في الواجهة حسب اللغة (labTitle, ...)
+  params    Json      @default("{}")
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, readAt])
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  action    String
+  entity    String?
+  entityId  String?
+  meta      Json?
+  ip        String?
+  createdAt DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([createdAt])
+}

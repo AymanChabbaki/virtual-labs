@@ -1,0 +1,107 @@
+@import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Design tokens — Virtual & Remote Labs
+   Stage colors: 1 = blue (virtual), 2 = amber (quiz), 3 = emerald (remote)
+--------------------------------------------------------------------------- */
+@theme {
+  --font-sans: "Inter", "Segoe UI", "Noto Sans Arabic", "Noto Sans", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, Consolas, monospace;
+
+  --color-brand-50: #eef5fc;
+  --color-brand-100: #d8e8f8;
+  --color-brand-200: #b5d3f1;
+  --color-brand-300: #85b6e6;
+  --color-brand-400: #4f93d6;
+  --color-brand-500: #2a78d6;
+  --color-brand-600: #1a5fb4;
+  --color-brand-700: #0f4c81;
+  --color-brand-800: #0d3a63;
+  --color-brand-900: #0a2a49;
+
+  --color-ink: #0f172a;
+  --color-ink-2: #475569;
+  --color-ink-3: #64748b;
+  --color-line: #e2e8f0;
+  --color-surface: #ffffff;
+  --color-canvas: #f4f6fa;
+
+  --color-s1: #2a78d6;
+  --color-s2: #d97706;
+  --color-s3: #059669;
+  --color-danger: #dc2626;
+
+  --shadow-card: 0 1px 2px rgb(15 23 42 / 0.05), 0 4px 16px -4px rgb(15 23 42 / 0.08);
+}
+
+html {
+  background: var(--color-canvas);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+}
+body {
+  min-height: 100dvh;
+  font-size: 15px;
+  line-height: 1.55;
+}
+[dir="rtl"] body {
+  font-size: 16px;
+  line-height: 1.7;
+}
+
+/* عناصر الإدخال */
+.input {
+  width: 100%;
+  border: 1px solid var(--color-line);
+  background: #fff;
+  border-radius: 0.6rem;
+  padding: 0.55rem 0.75rem;
+  font-size: 0.95rem;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+.input:focus {
+  border-color: var(--color-brand-500);
+  box-shadow: 0 0 0 3px rgb(42 120 214 / 0.18);
+}
+.input:disabled {
+  background: #f1f5f9;
+  color: #94a3b8;
+}
+textarea.input {
+  resize: vertical;
+}
+
+/* أرقام لاتينية دائماً لعرض القياسات */
+.num {
+  font-variant-numeric: tabular-nums;
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+/* حركة تدفق التيار في الرسوم */
+@keyframes flow {
+  to {
+    stroke-dashoffset: -24;
+  }
+}
+@keyframes pulse-ring {
+  0% { box-shadow: 0 0 0 0 rgb(220 38 38 / 0.5); }
+  100% { box-shadow: 0 0 0 14px rgb(220 38 38 / 0); }
+}
+.flow-line {
+  stroke-dasharray: 3 9;
+  stroke-linecap: round;
+  animation: flow var(--flow-dur, 1s) linear infinite;
+}
+.estop-pulse {
+  animation: pulse-ring 1.6s ease-out infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .flow-line, .estop-pulse { animation: none; }
+}
+
+/* شريط تمرير أنيق للجداول */
+.scroll-x { overflow-x: auto; }
