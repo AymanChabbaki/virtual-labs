@@ -126,7 +126,44 @@ node scripts/check-i18n.mjs     # مفاتيح الفرنسية والعربية
 
 ---
 
-## 5) حدود معروفة (صراحةً)
+## 5) النشر (Vercel + Render + AlwaysData)
+
+البنية: **الواجهة** على Vercel (مجاني)، **الخادم** (Express + Socket.io) على Render (مجاني، عملية دائمة تدعم WebSocket)، **قاعدة البيانات** Postgres على AlwaysData. المصادقة عبر Bearer token في `localStorage` (وليس كوكيز)، فلا مشاكل CORS/SameSite بين النطاقات المختلفة.
+
+### أ) قاعدة البيانات (AlwaysData)
+1. أنشئ قاعدة PostgreSQL من لوحة AlwaysData وانسخ رابط الاتصال (`postgresql://user:pass@postgresql-xxx.alwaysdata.net:5432/dbname`).
+2. إن رفض الاتصال من خارج شبكة AlwaysData (من Render)، أضف `?sslmode=require` في نهاية الرابط.
+
+### ب) الخادم (Render)
+1. ادفع المستودع إلى GitHub (انظر أدناه)، ثم في Render: **New → Blueprint** واختر المستودع — سيقرأ `render.yaml` الموجود في الجذر تلقائياً (خدمة واحدة، `rootDir: backend`).
+2. عبّئ القيم الفارغة (`sync: false`) يدوياً في لوحة Render:
+   - `DATABASE_URL` = رابط AlwaysData من الخطوة أ
+   - `CORS_ORIGIN` = رابط الواجهة على Vercel (مثلاً `https://virtual-labs.vercel.app`) — يمكن وضع عدة روابط مفصولة بفاصلة
+   - `JWT_SECRET` يُولَّد تلقائياً (`generateValue: true`)
+   - اترك `MQTT_URL`/`SMTP_*` فارغة إن لم تستعمل جهازاً حقيقياً أو بريداً حقيقياً (الجهاز الوهمي `bench-mock` لا يحتاج MQTT)
+3. أمر البدء `npx prisma migrate deploy && npm start` يطبّق ملف الترحيل `backend/prisma/migrations/` عند كل نشر (تم توليده من `schema.prisma` لأن المشروع كان يستعمل `db push` فقط سابقاً).
+4. لتعبئة بيانات تجريبية أول مرة: من **Shell** الخاص بالخدمة في Render، نفّذ `npm run db:seed`.
+5. Render المجاني "ينام" بعد ~15 دقيقة خمول، وأول طلب بعدها يستغرق نحو 30 ثانية (Socket.io يعيد الاتصال تلقائياً).
+
+### ج) الواجهة (Vercel)
+1. **Import Project** من نفس مستودع GitHub. اضبط **Root Directory = `frontend`** (المشروع monorepo).
+2. أضف متغيّر البيئة `NEXT_PUBLIC_API_URL` = رابط خدمة Render (مثلاً `https://virtual-labs-backend.onrender.com`) — بدون `/api` في النهاية.
+3. البناء والتشغيل تلقائيان (Next.js يُكتشف تلقائياً)؛ لا حاجة لأي إعداد إضافي.
+
+### د) رفع المستودع إلى GitHub
+تم تهيئة git محلياً بالفعل (`git init` + commit أولي). لرفعه:
+```bash
+git remote add origin https://github.com/<user>/<repo>.git
+git push -u origin main
+```
+
+### قيود معروفة عند هذا النمط من الاستضافة المجانية
+- **تقارير PDF** تُخزَّن على قرص الخادم (`STORAGE_DIR`)؛ خطة Render المجانية بلا قرص دائم، فتُفقد الملفات القديمة عند كل إعادة نشر (السجل في القاعدة يبقى لكن التنزيل يفشل). للحل الدائم: خطة Render المدفوعة بقرص دائم، أو تخزين سحابي (S3-compatible).
+- بدون `SMTP_*` تبقى الإيميلات في وضع dry-run (تُكتب في سجل Render فقط).
+
+---
+
+## 6) حدود معروفة (صراحةً)
 
 - **WebRTC غير منفَّذ**: الفيديو عبر MJPEG (وكاميرا محاكاة للجهاز الوهمي).
 - **الجهاز الحقيقي والفيديو الحقيقي لم يُختبرا** على عتاد فعلي؛ اختُبر تكامل MQTT ووكيل Python مع عتاد محاكى ووسيط مدمج.
