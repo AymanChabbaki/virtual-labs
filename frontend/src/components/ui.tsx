@@ -48,9 +48,9 @@ export function PageLoader() {
 }
 
 // ---------------------------------------------------------------- Card / Badge
-export function Card({ className, children, ...p }: { className?: string; children: ReactNode } & React.HTMLAttributes<HTMLDivElement>) {
+export function Card({ className, hoverable, children, ...p }: { className?: string; hoverable?: boolean; children: ReactNode } & React.HTMLAttributes<HTMLDivElement>) {
   return (
-    <div {...p} className={cx("rounded-2xl border border-line bg-surface p-5 shadow-card", className)}>
+    <div {...p} className={cx("rounded-2xl border border-line bg-surface p-5 shadow-card transition", hoverable && "hover:-translate-y-0.5 hover:border-brand-200 hover:shadow-lg", className)}>
       {children}
     </div>
   );
@@ -65,6 +65,11 @@ const tones = {
 };
 export function Badge({ tone = "slate", children, className }: { tone?: keyof typeof tones; children: ReactNode; className?: string }) {
   return <span className={cx("inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium", tones[tone], className)}>{children}</span>;
+}
+
+/** شارة أيقونة ملوّنة لبطاقات الإحصاء (لوحة القيادة) */
+export function IconBadge({ tone = "slate", children, className }: { tone?: keyof typeof tones; children: ReactNode; className?: string }) {
+  return <span className={cx("flex h-10 w-10 shrink-0 items-center justify-center rounded-xl", tones[tone], className)}>{children}</span>;
 }
 
 export function Alert({ tone = "blue", children, className }: { tone?: "blue" | "amber" | "green" | "red"; children: ReactNode; className?: string }) {

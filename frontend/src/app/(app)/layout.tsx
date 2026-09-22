@@ -68,13 +68,10 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
               <path d="M4 6h16M4 12h16M4 18h16" />
             </svg>
           </button>
-          <Link href="/dashboard" className="flex items-center gap-2 font-semibold text-brand-800">
-            <svg width="26" height="26" viewBox="0 0 32 32" fill="none" aria-hidden>
-              <rect width="32" height="32" rx="8" fill="#0f4c81" />
-              <path d="M11 6h10M13 6v7l-5 9a2 2 0 0 0 1.8 3h12.4a2 2 0 0 0 1.8-3l-5-9V6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-              <circle cx="14" cy="21" r="1.4" fill="#34d399" />
-            </svg>
-            <span className="hidden whitespace-nowrap sm:inline">{t("app.short")}</span>
+          <Link href="/dashboard" className="flex items-center gap-2.5 font-semibold text-brand-800">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-fsbm.png" alt="FSBM" className="h-9 w-auto" />
+            <span className="hidden whitespace-nowrap border-s border-line ps-2.5 text-sm text-ink-2 sm:inline">{t("app.short")}</span>
           </Link>
           <nav className="ms-4 hidden items-center gap-1 md:flex">
             {nav.map((n) => (

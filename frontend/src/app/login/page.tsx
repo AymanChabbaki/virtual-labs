@@ -50,8 +50,9 @@ export default function LoginPage() {
         <div className="pointer-events-none absolute -end-24 -top-24 h-96 w-96 rounded-full bg-brand-600/30 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-32 -start-16 h-96 w-96 rounded-full bg-emerald-500/20 blur-3xl" />
         <div className="relative">
-          <div className="flex items-center gap-3 text-xl font-semibold">
-            <Logo /> {t("app.name")}
+          <div className="inline-flex items-center rounded-xl bg-white/95 px-3 py-2 shadow-sm">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-fsbm.png" alt="FSBM — Université Hassan II de Casablanca" className="h-14 w-auto" />
           </div>
         </div>
         <div className="relative max-w-md space-y-8">
@@ -77,8 +78,9 @@ export default function LoginPage() {
           <LangSwitch />
         </div>
         <div className="mx-auto flex w-full max-w-sm flex-1 flex-col justify-center">
-          <div className="mb-8 flex items-center gap-3 text-brand-800 lg:hidden">
-            <Logo dark /> <span className="text-lg font-semibold">{t("app.name")}</span>
+          <div className="mb-8 flex items-center lg:hidden">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/logo-fsbm.png" alt="FSBM — Université Hassan II de Casablanca" className="h-12 w-auto" />
           </div>
           <h2 className="mb-1 text-2xl font-semibold">{t("login.title")}</h2>
           <p className="mb-6 text-ink-3">{t("login.subtitle")}</p>
@@ -95,30 +97,22 @@ export default function LoginPage() {
             </Button>
           </form>
 
-          <div className="mt-8 rounded-xl border border-dashed border-line bg-white/70 p-4">
-            <div className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-3">{t("login.demo")}</div>
-            <div className="grid grid-cols-2 gap-2">
-              {DEMO.map((d) => (
-                <button key={d.key} type="button" disabled={busy} onClick={() => submit(undefined, d)} className="rounded-lg border border-line bg-white px-3 py-2 text-start text-sm transition hover:border-brand-300 hover:bg-brand-50">
-                  <div className="font-medium">{t(`login.demo.${d.key}`)}</div>
-                  <div className="num truncate text-xs text-ink-3">{d.email}</div>
-                </button>
-              ))}
+          <div className="mt-8 overflow-hidden rounded-xl border border-line bg-white/70">
+            <div className="h-1 w-full bg-gradient-to-r from-s1 via-s2 to-s3" />
+            <div className="p-4">
+              <div className="mb-2 text-xs font-medium uppercase tracking-wide text-ink-3">{t("login.demo")}</div>
+              <div className="grid grid-cols-2 gap-2">
+                {DEMO.map((d) => (
+                  <button key={d.key} type="button" disabled={busy} onClick={() => submit(undefined, d)} className="rounded-lg border border-line bg-white px-3 py-2 text-start text-sm transition hover:border-brand-300 hover:bg-brand-50">
+                    <div className="font-medium">{t(`login.demo.${d.key}`)}</div>
+                    <div className="num truncate text-xs text-ink-3">{d.email}</div>
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
         </div>
       </section>
     </main>
-  );
-}
-
-function Logo({ dark }: { dark?: boolean }) {
-  return (
-    <svg width="32" height="32" viewBox="0 0 32 32" fill="none" aria-hidden>
-      <rect width="32" height="32" rx="9" fill={dark ? "#0f4c81" : "#ffffff22"} />
-      <path d="M11 6h10M13 6v7l-5 9a2 2 0 0 0 1.8 3h12.4a2 2 0 0 0 1.8-3l-5-9V6" stroke="#fff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
-      <circle cx="14" cy="21" r="1.4" fill="#34d399" />
-      <circle cx="19" cy="19" r="1" fill="#93c5fd" />
-    </svg>
   );
 }

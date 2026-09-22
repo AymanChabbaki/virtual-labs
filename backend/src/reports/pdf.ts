@@ -40,6 +40,7 @@ export interface ReportInput {
 
 const FONT = path.resolve(__dirname, "../../assets/fonts/DejaVuSans.ttf");
 const FONT_B = path.resolve(__dirname, "../../assets/fonts/DejaVuSans-Bold.ttf");
+const LOGO = path.resolve(__dirname, "../../assets/brand/logo-fsbm.png");
 
 const STR = {
   fr: {
@@ -165,8 +166,21 @@ export async function generateReportPdf(input: ReportInput, fileName: string): P
 
   // ---- ترويسة ----
   doc.rect(0, 0, 595, 88).fill("#0f4c81");
-  put(input.kind === "VIRTUAL" ? S.virtual : S.remote, L, 22, W, { bold: true, size: 18, color: "#ffffff" });
-  put(input.title, L, 52, W, { size: 13, color: "#dbeafe" });
+  // شعار الجامعة: صندوق أبيض في جهة البداية (يمين للعربية، يسار للفرنسية) حتى لا يتعارض مع اتجاه النص
+  const LOGO_W = 100,
+    LOGO_H = 64,
+    LOGO_Y = 12;
+  const logoX = rtl ? R - LOGO_W : L;
+  if (fs.existsSync(LOGO)) {
+    doc.roundedRect(logoX, LOGO_Y, LOGO_W, LOGO_H, 6).fill("#ffffff");
+    const imgW = LOGO_W - 16;
+    const imgH = (imgW * 250) / 454;
+    doc.image(LOGO, logoX + 8, LOGO_Y + (LOGO_H - imgH) / 2, { width: imgW });
+  }
+  const titleX = rtl ? L : L + LOGO_W + 10;
+  const titleW = W - LOGO_W - 10;
+  put(input.kind === "VIRTUAL" ? S.virtual : S.remote, titleX, 22, titleW, { bold: true, size: 18, color: "#ffffff" });
+  put(input.title, titleX, 52, titleW, { size: 13, color: "#dbeafe" });
 
   let y = 108;
   // بيانات الطالب (كل قيمة في سطر منفصل)

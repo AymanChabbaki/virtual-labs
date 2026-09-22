@@ -2,7 +2,7 @@
 // لوحة القيادة: عرض مختلف لكل دور (طالب: تقدّمه + حصصه؛ أستاذ/مدير: قمع المراحل لكل TP + حالة الأجهزة)
 import Link from "next/link";
 import useSWR from "swr";
-import { Badge, Button, Card, Empty, PageLoader } from "@/components/ui";
+import { Badge, Button, Card, Empty, IconBadge, PageLoader } from "@/components/ui";
 import { StageStepper, STAGE_ROUTE, nextStage } from "@/components/Path";
 import { fetcher } from "@/lib/api";
 import { useAuth } from "@/lib/auth";
@@ -38,28 +38,51 @@ function StudentDash() {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-3">
-        <Card>
-          <div className="text-sm text-ink-3">{t("dash.overall")}</div>
-          <div className="num mt-1 text-3xl font-semibold">
-            {done}
-            <span className="text-lg text-ink-3">/{total}</span>
+        <Card className="flex items-start gap-3.5">
+          <IconBadge tone="blue">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M3 3v18h18" />
+              <path d="M7 16l4-6 3 4 5-8" />
+            </svg>
+          </IconBadge>
+          <div>
+            <div className="text-sm text-ink-3">{t("dash.overall")}</div>
+            <div className="num mt-0.5 text-3xl font-semibold">
+              {done}
+              <span className="text-lg text-ink-3">/{total}</span>
+            </div>
+            <div className="mt-1 text-xs text-ink-3">{t("dash.stages_done")}</div>
           </div>
-          <div className="mt-1 text-xs text-ink-3">{t("dash.stages_done")}</div>
         </Card>
-        <Card>
-          <div className="text-sm text-ink-3">{t("dash.best_quiz")}</div>
-          <div className="num mt-1 text-3xl font-semibold">{data.quizResults.length ? `${fmtNum(Math.max(...data.quizResults.map((r) => r.percent)), 0)}%` : "—"}</div>
+        <Card className="flex items-start gap-3.5">
+          <IconBadge tone="amber">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M12 15a5 5 0 1 0 0-10 5 5 0 0 0 0 10Z" />
+              <path d="M8.5 13.5 7 22l5-2.5L17 22l-1.5-8.5" />
+            </svg>
+          </IconBadge>
+          <div>
+            <div className="text-sm text-ink-3">{t("dash.best_quiz")}</div>
+            <div className="num mt-0.5 text-3xl font-semibold">{data.quizResults.length ? `${fmtNum(Math.max(...data.quizResults.map((r) => r.percent)), 0)}%` : "—"}</div>
+          </div>
         </Card>
-        <Card className="flex flex-col justify-between">
-          <div className="text-sm text-ink-3">{t("dash.next")}</div>
-          {nextLab ? (
-            <Link href={`/labs/${nextLab.slug}/${STAGE_ROUTE[nextStage(nextLab.status) - 1]}`} className="mt-1">
-              <div className="font-medium leading-snug">{pick(nextLab, "title")}</div>
-              <div className="mt-1 text-sm text-brand-700">{t(`stage.${nextStage(nextLab.status)}.name`)} →</div>
-            </Link>
-          ) : (
-            <div className="mt-1 font-medium text-s3">{t("dash.all_done")}</div>
-          )}
+        <Card hoverable={!!nextLab} className="flex items-start gap-3.5">
+          <IconBadge tone={nextLab ? "green" : "slate"}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              {nextLab ? <path d="M5 12h14M13 6l6 6-6 6" /> : <path d="m5 13 4 4L19 7" />}
+            </svg>
+          </IconBadge>
+          <div className="min-w-0 flex-1">
+            <div className="text-sm text-ink-3">{t("dash.next")}</div>
+            {nextLab ? (
+              <Link href={`/labs/${nextLab.slug}/${STAGE_ROUTE[nextStage(nextLab.status) - 1]}`} className="mt-0.5 block">
+                <div className="truncate font-medium leading-snug">{pick(nextLab, "title")}</div>
+                <div className="mt-1 text-sm text-brand-700">{t(`stage.${nextStage(nextLab.status)}.name`)} →</div>
+              </Link>
+            ) : (
+              <div className="mt-0.5 font-medium text-s3">{t("dash.all_done")}</div>
+            )}
+          </div>
         </Card>
       </div>
 
@@ -70,7 +93,7 @@ function StudentDash() {
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
             {data.labs.map((l) => (
-              <Card key={l.id}>
+              <Card key={l.id} hoverable>
                 <div className="mb-3 flex items-center justify-between gap-3">
                   <Link href={`/labs/${l.slug}`} className="font-semibold hover:text-brand-700">
                     {pick(l, "title")}
@@ -168,9 +191,37 @@ function StaffDash({ admin }: { admin: boolean }) {
       </div>
 
       <div className="grid gap-4 sm:grid-cols-4">
-        <Stat label={t("dash.labs_count")} value={data.labs.length} />
-        <Stat label={t("dash.students_count")} value={students} />
-        <Stat label={t("dash.completions")} value={completions} />
+        <Stat
+          label={t("dash.labs_count")}
+          value={data.labs.length}
+          tone="blue"
+          icon={
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M9 3h6M10 3v5.2a2 2 0 0 1-.4 1.2L5.5 15.6A2.5 2.5 0 0 0 7.5 20h9a2.5 2.5 0 0 0 2-4.4l-4.1-6.2A2 2 0 0 1 14 8.2V3" />
+            </svg>
+          }
+        />
+        <Stat
+          label={t("dash.students_count")}
+          value={students}
+          tone="amber"
+          icon={
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2M9 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8ZM22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75" />
+            </svg>
+          }
+        />
+        <Stat
+          label={t("dash.completions")}
+          value={completions}
+          tone="green"
+          icon={
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+              <path d="M12 22c5.5-2 8-6 8-11V5l-8-3-8 3v6c0 5 2.5 9 8 11Z" />
+              <path d="m9 12 2 2 4-4" />
+            </svg>
+          }
+        />
         <Card>
           <div className="text-sm text-ink-3">{t("dash.devices")}</div>
           <div className="mt-2 space-y-1">
@@ -192,7 +243,7 @@ function StaffDash({ admin }: { admin: boolean }) {
         ) : (
           <div className="grid gap-4 lg:grid-cols-2">
             {data.labs.map((l) => (
-              <Card key={l.id}>
+              <Card key={l.id} hoverable>
                 <div className="mb-4 flex items-start justify-between gap-3">
                   <Link href={`/teacher/labs/${l.id}`} className="font-semibold hover:text-brand-700">
                     {pick(l, "title")}
@@ -212,10 +263,13 @@ function StaffDash({ admin }: { admin: boolean }) {
   );
 }
 
-const Stat = ({ label, value }: { label: string; value: number }) => (
-  <Card>
-    <div className="text-sm text-ink-3">{label}</div>
-    <div className="num mt-1 text-3xl font-semibold">{value}</div>
+const Stat = ({ label, value, icon, tone }: { label: string; value: number; icon?: React.ReactNode; tone?: "blue" | "amber" | "green" | "slate" }) => (
+  <Card className={icon ? "flex items-start gap-3.5" : undefined}>
+    {icon && <IconBadge tone={tone}>{icon}</IconBadge>}
+    <div>
+      <div className="text-sm text-ink-3">{label}</div>
+      <div className="num mt-0.5 text-3xl font-semibold">{value}</div>
+    </div>
   </Card>
 );
 

@@ -33,9 +33,9 @@ export default function LabsPage() {
           {data.labs.map((l) => {
             const ns = l.status ? nextStage(l.status) : 1;
             return (
-              <Card key={l.id} className="flex flex-col gap-4">
+              <Card key={l.id} hoverable className="flex flex-col gap-4">
                 <div className="flex items-start gap-3">
-                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700">
+                  <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl bg-brand-50 text-brand-700 ring-1 ring-brand-100">
                     <SimIcon kind={l.simulator} />
                   </span>
                   <div className="min-w-0">
